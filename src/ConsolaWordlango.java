@@ -3,81 +3,110 @@ import java.util.*;
 public class ConsolaWordlango {
 
     public static void main(String[] args) {
-
         Diccionario dicEsp = new Diccionario();
-        dicEsp.cargarArchivo("espanol.txt");
-
+        dicEsp.cargarArchivo("diccionario_es_categoria.txt");
         Diccionario dicIng = new Diccionario();
-        dicIng.cargarArchivo("ingles.txt");
+        dicIng.cargarArchivo("diccionario_en_categoria.txt");
 
         Scanner sc = new Scanner(System.in);
 
-        // 🔹 idioma
-        System.out.println("Selecciona idioma:");
-        System.out.println("1) Español");
-        System.out.println("2) Inglés");
+        int idioma = 0;
 
-        int idioma = sc.nextInt();
-        sc.nextLine();
+        while (true) {
+            System.out.println("Selecciona idioma:");
+            System.out.println("1) Español");
+            System.out.println("2) Inglés");
 
-        // 🔹 dificultad
-        System.out.println("Selecciona dificultad:");
-        System.out.println("1) 5 letras");
-        System.out.println("2) 6 letras");
-        System.out.println("3) 7 letras");
+            if (sc.hasNextInt()) {
+                idioma = sc.nextInt();
+                sc.nextLine();
 
-        int opcion = sc.nextInt();
-        sc.nextLine();
+                if (idioma == 1 || idioma == 2) break;
+            } else {
+                sc.nextLine();
+            }
 
+            System.out.println("Entrada inválida. Debes elegir 1 o 2.\n");
+        }
+
+        int opcion = 0;
+        while (true) {
+            System.out.println("Selecciona dificultad:");
+            System.out.println("1) 5 letras");
+            System.out.println("2) 6 letras");
+            System.out.println("3) 7 letras");
+            if (sc.hasNextInt()) {
+                opcion = sc.nextInt();
+                sc.nextLine();
+                if (opcion >= 1 && opcion <= 3) break;
+            } else {
+                sc.nextLine();
+            }
+            System.out.println("Entrada inválida. Debes elegir 1, 2 o 3.\n");
+        }
         int longitud = opcion + 4;
-
+        int intentos = 0;
+        while (true) {
+            System.out.print("¿Cuántos intentos quieres? (6-8): ");
+            if (sc.hasNextInt()) {
+                intentos = sc.nextInt();
+                sc.nextLine();
+                if (intentos >= 6 && intentos <= 8) break;
+            } else {
+                sc.nextLine();
+            }
+            System.out.println("Entrada inválida. Debe ser un número entre 6 y 8.\n");
+        }
         JuegoWordlango juego;
         Diccionario dicActual;
-
+        String archivoActual;
         if (idioma == 1) {
             juego = new JuegoWordlango(dicEsp.getDiccionario(), "Español");
             dicActual = dicEsp;
+            archivoActual = "espanol.txt";
         } else {
             juego = new JuegoWordlango(dicIng.getDiccionario(), "Inglés");
             dicActual = dicIng;
+            archivoActual = "ingles.txt";
         }
+        juego.iniciarJuego(longitud, intentos);
 
-        juego.iniciarJuego(longitud);
+        System.out.println("\nReglas:");
+        System.out.println("[letra] = correcta posición");
+        System.out.println("(letra) = existe pero en otra posición");
+        System.out.println(" letra  = no existe\n");
 
-        // 🔹 historial de intentos
         List<String> historial = new ArrayList<>();
-
         String alfabeto = "abcdefghijklmnopqrstuvwxyz";
 
         while (!juego.terminoJuego()) {
 
             System.out.println("\nIntentos restantes: " + juego.getIntentosRestantes());
 
-            // 🔹 mostrar historial
             System.out.println("Intentos:");
-            for (String h : historial) {
-                System.out.println(h);
-            }
+            historial.forEach(System.out::println);
 
-            // 🔹 letras usadas
             System.out.println("Usadas: " + new TreeSet<>(juego.getLetrasUsadas()));
 
-            // 🔹 letras no usadas
             System.out.print("No usadas: ");
-            for (char c : alfabeto.toCharArray()) {
-                if (!juego.getLetrasUsadas().contains(c)) {
-                    System.out.print(c + " ");
-                }
-            }
+            alfabeto.chars()
+                    .mapToObj(c -> (char) c)
+                    .filter(c -> !juego.getLetrasUsadas().contains(c))
+                    .forEach(c -> System.out.print(c + " "));
             System.out.println();
 
-            // 🔹 menú
             System.out.println("\nOpciones:");
             System.out.println("1) Intentar palabra");
             System.out.println("2) Pista vocal");
             System.out.println("3) Pista consonante");
+            System.out.println("4) Pista definición");
 
             String opcionMenu = sc.nextLine();
+
+            if (!opcionMenu.matches("[1-4]")) {
+                System.out.println("Opción inválida. Elige entre 1 y 4.");
+                continue;
+            }
 
             if (opcionMenu.equals("2")) {
                 System.out.println("Vocal: " + juego.darPistaVocal());
@@ -89,9 +118,20 @@ public class ConsolaWordlango {
                 continue;
             }
 
-            // 🔹 intento
+            if (opcionMenu.equals("4")) {
+                System.out.println("Definición: " + juego.darPistaDefinicion());
+                continue;
+            }
+
+            // 🔹 intento seguro
             System.out.print("Ingresa palabra: ");
             String intento = sc.nextLine();
+
+            if (!juego.longitudValida(intento)) {
+                System.out.println("La palabra debe tener "
+                        + juego.getLongitudPalabra() + " letras.");
+                continue;
+            }
 
             if (!juego.validarPalabra(intento)) {
 
@@ -105,22 +145,20 @@ public class ConsolaWordlango {
                     String def = sc.nextLine();
 
                     dicActual.agregarPalabra(intento, def);
-                    System.out.println("Palabra agregada.");
-                }
+                    dicActual.guardarEnArchivo(archivoActual, intento, def);
 
+                    System.out.println("Palabra agregada al diccionario de "
+                            + juego.getIdioma());
+                }
                 continue;
             }
 
-            // 🔹 procesar intento
             String resultado = juego.procesarIntento(intento);
             historial.add(resultado);
 
             if (juego.gano(intento)) {
-
                 System.out.println("\nIntentos:");
-                for (String h : historial) {
-                    System.out.println(h);
-                }
+                historial.forEach(System.out::println);
 
                 System.out.println("¡Ganaste!");
                 return;
@@ -128,8 +166,9 @@ public class ConsolaWordlango {
         }
 
         System.out.println("\nIntentos:");
-        historial.forEach(h -> System.out.println(h));
+        historial.forEach(System.out::println);
 
-        System.out.println("Perdiste. La palabra era: " + juego.getPalabraSecreta());
+        System.out.println("Perdiste. La palabra era: "
+                + juego.getPalabraSecreta());
     }
 }

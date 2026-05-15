@@ -5,28 +5,31 @@ public class JuegoWordlango {
     private String palabraSecreta;
     private int intentosMaximos;
     private int intentosActuales;
+    private int longitudPalabra;
 
     private HashSet<Character> letrasUsadas;
-    private HashMap<String, Integer> diccionario;
+    private HashMap<String, String> diccionario;
 
     private Random random;
-    private String idioma; // 🔹 NUEVO
+    private String idioma;
 
-    public JuegoWordlango(HashMap<String, Integer> diccionario, String idioma) {
+    public JuegoWordlango(HashMap<String, String> diccionario, String idioma) {
         this.diccionario = diccionario;
         this.idioma = idioma;
         this.letrasUsadas = new HashSet<>();
         this.random = new Random();
     }
 
-    public void iniciarJuego(int longitud) {
+    public void iniciarJuego(int longitud, int intentos) {
 
         intentosActuales = 0;
         letrasUsadas.clear();
 
-        if (longitud == 5) intentosMaximos = 6;
-        else if (longitud == 6) intentosMaximos = 7;
-        else if (longitud == 7) intentosMaximos = 8;
+        this.longitudPalabra = longitud;
+        if (intentos < 6 || intentos > 8) {
+            throw new IllegalArgumentException("Los intentos deben estar entre 6 y 8.");
+        }
+        this.intentosMaximos = intentos;
 
         palabraSecreta = obtenerPalabraAleatoria(longitud);
     }
@@ -44,12 +47,19 @@ public class JuegoWordlango {
             }
         }
 
+        if (lista.isEmpty()) {
+            throw new RuntimeException("No hay palabras de esa longitud.");
+        }
+
         return lista.get(random.nextInt(lista.size()));
     }
 
     public boolean validarPalabra(String palabra) {
-        palabra = palabra.toLowerCase();
-        return diccionario.containsKey(palabra);
+        return diccionario.containsKey(palabra.toLowerCase());
+    }
+
+    public boolean longitudValida(String intento) {
+        return intento.length() == longitudPalabra;
     }
 
     public String procesarIntento(String intento) {
@@ -59,21 +69,49 @@ public class JuegoWordlango {
 
         StringBuilder resultado = new StringBuilder();
 
+        // 🔹 conteo de letras en palabra secreta
+        HashMap<Character, Integer> conteo = new HashMap<>();
+
+        for (char c : palabraSecreta.toCharArray()) {
+            conteo.put(c, conteo.getOrDefault(c, 0) + 1);
+        }
+
+        char[] res = new char[intento.length() * 3];
+        int idx = 0;
         for (int i = 0; i < intento.length(); i++) {
 
             char letra = intento.charAt(i);
             letrasUsadas.add(letra);
 
             if (letra == palabraSecreta.charAt(i)) {
+
                 resultado.append("[" + letra + "]");
-            } else if (palabraSecreta.contains(String.valueOf(letra))) {
-                resultado.append("(" + letra + ")");
+                conteo.put(letra, conteo.get(letra) - 1);
+
             } else {
-                resultado.append(" " + letra + " ");
+                resultado.append("_"); // marcador temporal
+            }
+        }
+        String resultadoFinal = "";
+        int pos = 0;
+
+        for (int i = 0; i < intento.length(); i++) {
+
+            char letra = intento.charAt(i);
+
+            if (letra == palabraSecreta.charAt(i)) {
+                resultadoFinal += "[" + letra + "]";
+            } else if (conteo.getOrDefault(letra, 0) > 0) {
+
+                resultadoFinal += "(" + letra + ")";
+                conteo.put(letra, conteo.get(letra) - 1);
+
+            } else {
+                resultadoFinal += " " + letra + " ";
             }
         }
 
-        return resultado.toString();
+        return resultadoFinal;
     }
 
     public char darPistaVocal() {
@@ -110,7 +148,15 @@ public class JuegoWordlango {
         return palabraSecreta;
     }
 
-    public String getIdioma() { // 🔹 opcional
+    public int getLongitudPalabra() {
+        return longitudPalabra;
+    }
+
+    public String getIdioma() {
         return idioma;
+    }
+    public String darPistaDefinicion() {
+        return diccionario.getOrDefault(palabraSecreta,
+                "Sin definición disponible");
     }
 }
